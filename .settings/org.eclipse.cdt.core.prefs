@@ -1,0 +1,22 @@
+#Mon Sep 21 19:13:04 BST 2015
+eclipse.preferences.version=1
+environment/project/com.xmos.cdt.toolchain.1038700324/XMOS_MODULE_PATH/delimiter=;
+environment/project/com.xmos.cdt.toolchain.1038700324/XMOS_MODULE_PATH/operation=append
+environment/project/com.xmos.cdt.toolchain.1038700324/XMOS_MODULE_PATH/value=
+environment/project/com.xmos.cdt.toolchain.1038700324/append=true
+environment/project/com.xmos.cdt.toolchain.1038700324/appendContributed=true
+environment/project/com.xmos.cdt.toolchain.1654143906/XMOS_MODULE_PATH/delimiter=;
+environment/project/com.xmos.cdt.toolchain.1654143906/XMOS_MODULE_PATH/operation=append
+environment/project/com.xmos.cdt.toolchain.1654143906/XMOS_MODULE_PATH/value=
+environment/project/com.xmos.cdt.toolchain.1654143906/append=true
+environment/project/com.xmos.cdt.toolchain.1654143906/appendContributed=true
+environment/project/com.xmos.cdt.toolchain.322502853/XMOS_MODULE_PATH/delimiter=;
+environment/project/com.xmos.cdt.toolchain.322502853/XMOS_MODULE_PATH/operation=append
+environment/project/com.xmos.cdt.toolchain.322502853/XMOS_MODULE_PATH/value=C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\app_adc_example;C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\app_scanning_leds;C\:\\Users\\steve\\sc_i2s\\app_slicekit_i2s_master_demo;C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\app_spinning_bar;C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\app_spinning_dot;C\:\\Users\\steve\\.xmos\\repos\\sc_capacitive_sensing\\module_capacitive_sensing;C\:\\Users\\steve\\sc_i2s\\module_i2s_loopback;C\:\\Users\\steve\\sc_i2s\\module_i2s_master;C\:\\Users\\steve\\.xmos\\repos\\sc_util\\module_logging;C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\module_startkit_adc;C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\module_startkit_gpio;C\:\\Users\\steve\\sc_sdcard
+environment/project/com.xmos.cdt.toolchain.322502853/append=true
+environment/project/com.xmos.cdt.toolchain.322502853/appendContributed=true
+environment/project/com.xmos.cdt.toolchain.88729737/XMOS_MODULE_PATH/delimiter=;
+environment/project/com.xmos.cdt.toolchain.88729737/XMOS_MODULE_PATH/operation=append
+environment/project/com.xmos.cdt.toolchain.88729737/XMOS_MODULE_PATH/value=C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\app_adc_example;C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\app_scanning_leds;C\:\\Users\\steve\\sc_i2s\\app_slicekit_i2s_master_demo;C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\app_spinning_bar;C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\app_spinning_dot;C\:\\Users\\steve\\.xmos\\repos\\sc_capacitive_sensing\\module_capacitive_sensing;C\:\\Users\\steve\\sc_i2s\\module_i2s_loopback;C\:\\Users\\steve\\sc_i2s\\module_i2s_master;C\:\\Users\\steve\\.xmos\\repos\\sc_util\\module_logging;C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\module_startkit_adc;C\:\\Users\\steve\\.xmos\\repos\\sw_startkit_examples\\module_startkit_gpio;C\:\\Users\\steve\\sc_sdcard
+environment/project/com.xmos.cdt.toolchain.88729737/append=true
+environment/project/com.xmos.cdt.toolchain.88729737/appendContributed=true

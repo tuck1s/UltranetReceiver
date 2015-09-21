@@ -4,7 +4,7 @@
  *  Created on: 11 Aug 2015
  *      Author: steve
  *
- *  Captures incoming data from I2Ss port and streams it via a channel to a debug process.
+ *  Captures incoming data from I2S port and streams it via a channel to a debug process.
  */
 #include <stdio.h>
 #include <xscope.h>
@@ -79,4 +79,3 @@ int main() {
         }
     return 0;
 }
-

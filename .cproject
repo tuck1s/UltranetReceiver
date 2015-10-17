@@ -497,7 +497,7 @@
 					<folderInfo id="com.xmos.cdt.toolchain.1038700324.2099260167" name="/" resourcePath="">
 						<toolChain id="com.xmos.cdt.toolchain.2058189642" name="com.xmos.cdt.toolchain" superClass="com.xmos.cdt.toolchain">
 							<targetPlatform archList="all" binaryParser="com.xmos.cdt.core.XEBinaryParser;org.eclipse.cdt.core.GNU_ELF" id="com.xmos.cdt.core.platform.1447320668" isAbstract="false" osList="linux,win32,macosx" superClass="com.xmos.cdt.core.platform"/>
-							<builder arguments="CONFIG=Release" id="com.xmos.cdt.builder.base.600564194" keepEnvironmentInBuildfile="false" managedBuildOn="false" superClass="com.xmos.cdt.builder.base">
+							<builder appendEnvironment="true" arguments="CONFIG=Release" environment="XTA_ENABLED=false|" id="com.xmos.cdt.builder.base.600564194" keepEnvironmentInBuildfile="false" managedBuildOn="false" superClass="com.xmos.cdt.builder.base">
 								<outputEntries>
 									<entry flags="VALUE_WORKSPACE_PATH" kind="outputPath" name="bin\Release"/>
 								</outputEntries>

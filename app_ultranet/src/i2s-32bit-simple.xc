@@ -23,16 +23,36 @@ enum i2s_state { search_lr_sync, search_multiframe_sync, check_second_multiframe
 
 enum status { good, frame_error };
 inline void status_leds(enum status s);
+inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
 
 /*
  * Send two values a and b to the channel (helper function).
  * Formatting will be adjusted to fit the bandwidth available in the SDcard write process.
  *
- * Initial version:  just send channel A
+ * Initial version:  just send channel A, most significant 16 bits contains the audio.
+ * Double-pack the words written to the channel.
  */
+uint32_t ahalfword = 0;
+uint32_t chkval = 0;
+
 inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
-    c<: a;
-    c<: b;                   //fixme
+    if(chkval<1) {
+        // This is channel 0 - send it
+        c<:b;
+    }
+    chkval++;
+    chkval &=0x7;       // Only one in 8 channels
+    /*
+    if(ahalfword) {
+        c<: (ahalfword|((a>>16)&0xffff) );      // Pack two words in
+        ahalfword = 0;              // Clear the pending value
+    }
+    else {
+        ahalfword = a & 0xffff0000; // Store the pending value
+    }
+    //c<: b;                   //fixme
+
+     */
 }
 
 /* Input on two i2s streams A and B in parallel
@@ -41,7 +61,7 @@ inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
  * - Process frames, while checking we're still in sync
  * - if data doesn't match, drop back to reacquire LR sync in case of missed or erroneous data
  */
-void dual_i2s_in(streaming chanend c) {
+void dual_i2s_in_task(streaming chanend c) {
     enum i2s_state st;
     int t, lr;
     uint32_t s1A, s2A, s1B, s2B;
@@ -58,11 +78,15 @@ void dual_i2s_in(streaming chanend c) {
     start_clock(cb);                                // start clock block after configuration
     st = search_lr_sync;
 
+    delay_milliseconds(1000*5);                 // Wait before starting to fill the buffer
+
     while(1){
         switch(st) {
         case search_lr_sync:
             lrclk :> lr;                        // Read the initial value
             lrclk when pinsneq(lr) :> lr @t;    // Wait for LRCLK edge, and timestamp it
+            clearbuf(dinA);
+            clearbuf(dinB);
 
             t+= 31;                             // Just had the LSB of previous word
             dinB @t :> s1B; s1B = bitrev(s1B);  // todo: why does this only work when in order B then A?

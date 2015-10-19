@@ -21,8 +21,8 @@ in buffered port:32 dinB = XS1_PORT_1E; // J7 pin 4 = DOUT_9_16 from WM8804 Ultr
 enum i2s_state { search_lr_sync, search_multiframe_sync, check_second_multiframe_sync, in_sync };
 #define FRAME_SIZE 0x180
 
-enum status { good, frame_error };
-inline void status_leds(enum status s);
+inline void status_leds_good();
+inline void status_leds_error();
 inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
 
 /*
@@ -33,26 +33,24 @@ inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
  * Double-pack the words written to the channel.
  */
 uint32_t ahalfword = 0;
-uint32_t chkval = 0;
+uint32_t currChan = 0;
+const uint32_t nChans = 1;
 
 inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
-    if(chkval<1) {
-        // This is channel 0 - send it
-        c<:b;
-    }
-    chkval++;
-    chkval &=0x7;       // Only one in 8 channels
-    /*
-    if(ahalfword) {
-        c<: (ahalfword|((a>>16)&0xffff) );      // Pack two words in
-        ahalfword = 0;              // Clear the pending value
-    }
-    else {
-        ahalfword = a & 0xffff0000; // Store the pending value
-    }
-    //c<: b;                   //fixme
+    if(currChan<nChans) {
+        // This is an active channel - send it
 
-     */
+        // Write two 16-bit signed values into a single 32-bit channel-word
+        if(ahalfword) {
+            c<: (a&0xffff0000)|(ahalfword);      // Pack two words in, little-endian word order
+            ahalfword = 0;              // Clear the pending value
+        }
+        else {
+            ahalfword = a>>16;          // Store the pending value
+        }
+    }
+    currChan++;
+    currChan &=0x7;       // Only one in 8 channels
 }
 
 /* Input on two i2s streams A and B in parallel
@@ -75,8 +73,9 @@ void dual_i2s_in_task(streaming chanend c) {
 
     // clock block clocked off external BCLK
     set_clock_src(cb, bclk);
-    start_clock(cb);                                // start clock block after configuration
+    start_clock(cb);                            // start clock block after configuration
     st = search_lr_sync;
+    status_leds_good();
 
     delay_milliseconds(1000*5);                 // Wait before starting to fill the buffer
 
@@ -109,7 +108,7 @@ void dual_i2s_in_task(streaming chanend c) {
             }
             else {
                 if(--t <=0) {
-                    status_leds(frame_error);
+                    status_leds_error();
                     st = search_lr_sync;        // Waited too long - start again from scratch
                 }
             }
@@ -125,7 +124,7 @@ void dual_i2s_in_task(streaming chanend c) {
                 st = in_sync;
             }
             else {
-                status_leds(frame_error);
+                status_leds_error();
                 st = search_lr_sync;    // Mismatch - go back to initial state and re-acquire sync
             }
             break;
@@ -142,7 +141,7 @@ void dual_i2s_in_task(streaming chanend c) {
             st = search_multiframe_sync;
 
             // Indicate all is well on the 3x3 LEDs
-            status_leds(good);
+            status_leds_good();
             break;
         }
     }
@@ -165,32 +164,35 @@ port p32 = XS1_PORT_32A;                            // This the 3x3 LEDs port
 // Counters
 uint32_t frame_err_ctr = 0;
 uint32_t frame_good_ctr = 0;
+
 uint32_t err_led_on = 0;
+uint32_t spin_bits = 0xA1F80;                       // Starting position
+uint32_t spin_pos = 0;
+uint32_t err_bit = 0;
 
-const uint32_t err_led_on_time = 2*(48000/(FRAME_SIZE/8));
+const uint32_t err_led_on_time = 1*(48000/(FRAME_SIZE/8));
 
-void status_leds(enum status s) {
-    uint32_t err_bit;
-
-    switch(s) {
-    case good:
-        frame_good_ctr++;
-        break;
-
-    case frame_error:
-        frame_err_ctr++;
-        err_led_on = err_led_on_time;       // Light the Error LED through the next n seconds/frames
-        //printf("Frame errors: %d, good frames: %d\n", frame_err_ctr, frame_good_ctr);
-        break;
+// 8-position spinning dot for good frames (changing every 2^n valid frames)
+// xor'd with the middle one indicating errors
+void status_leds_good() {
+    frame_good_ctr++;
+    if(!(frame_good_ctr & 0x3f)) {
+        // Walk to the next position every 2^n frames
+        spin_pos++; spin_pos &= 0x7;
+        spin_bits = (leds_3x3[spin_pos]);
     }
     if(err_led_on) {
-        err_led_on--;
-        err_bit = middle_led;
+        err_led_on--;                   // count down, extinguish when zero
     }
     else {
         err_bit = 0;
     }
-    // 8-position spinning dot for good frames (changing every 2^n valid frames)
-    // xor'd with the middle one indicating errors
-    p32 <: ((leds_3x3[(frame_good_ctr>>6) & 0x7]) ^ err_bit);
+    p32 <: (spin_bits ^ err_bit);
+}
+
+void status_leds_error() {
+    frame_err_ctr++;
+    err_led_on = err_led_on_time;       // Light the Error LED through the next n seconds/frames
+    err_bit = middle_led;
+    p32 <: (spin_bits ^ err_bit);
 }

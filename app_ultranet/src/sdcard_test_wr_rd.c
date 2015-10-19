@@ -25,7 +25,7 @@ FIL Fil;                /* File object */
 #define max(a,b) ((a)>(b))?(a):(b)
 #define min(a,b) ((a)<(b))?(a):(b)
 
-const unsigned targetFileSize = 4*1024*1024;  //4096UL*1024*1024*1024-32768;   // Can't quite get to 4G size
+const unsigned targetFileSize = 1*1024*1024;  //4096UL*1024*1024*1024-32768;   // Can't quite get to 4G size
 
 void die(FRESULT rc ) /* Stop with dying message */
 {

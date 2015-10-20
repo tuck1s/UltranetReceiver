@@ -184,7 +184,7 @@ unsigned WaitForTimed(in port p, unsigned bitmask, unsigned chkval, out port clk
  * Memory buffer:   Pass valid buff[], set c to null.
  * Streamed:        Set buff[] as null, and channel c will be used to read/write data instead
  **********************************************************************************/
-static DRESULT SendCmd(BYTE IfNum, BYTE Cmd, DWORD Arg, RESP_TYPE RespType, int DataBlocks, BYTE buff[], RESP Resp, streaming chanend ?c)
+static DRESULT SendCmd(BYTE IfNum, BYTE Cmd, DWORD Arg, RESP_TYPE RespType, int DataBlocks, BYTE buff[], RESP Resp, chanend ?c)
 
 { //01CMD[6]ARG[32]CRC[7]1
   unsigned int i, j, Crc0 = 0, Crc1, Crc2, Crc3;
@@ -274,7 +274,7 @@ static DRESULT SendCmd(BYTE IfNum, BYTE Cmd, DWORD Arg, RESP_TYPE RespType, int 
 
       case DAT_RECEIVING_NIBBLE_L:
         if(buff == NULL) {
-            dead_parrot(0);                         //todo: streaming mode
+            dead_parrot(0);                         //todo: XMOS channel mode
         }
         buff[DatByteCount++] = bitrev(Dat);
         if(!RespStat) // if response received... (can continue just sampling dat lines)
@@ -366,14 +366,24 @@ static DRESULT SendCmd(BYTE IfNum, BYTE Cmd, DWORD Arg, RESP_TYPE RespType, int 
 
 #ifdef _STREAM_FS
       if(buff == NULL) {
-          // Data is coming from the streaming channel
-          for(j = 512/4; j; j--) // send bytes of data (512/4 int)
+          // Data is coming from the channel
+          for(j = 512/4; j; ) // send bytes of data (512/4 int)
           {
-            c :> Dat;                           // XMOS Streaming version
-            Dat = byterev(bitrev(Dat));
-            DatByteCount++;
-            calc_sdcard_crc(Dat, D0, D1, D2, D3, Crc0, Crc1, Crc2, Crc3);
-            send_8_nibbles;
+              uint8_t ct;                       // Control token
+              select {
+                  case inct_byref(c, ct):
+                      // The other thread has notified us that data is ready
+                      // Signal that we wish to consume the data
+                      c <: 0;
+                      c :> Dat;                 // This should not block due to the case above
+                      Dat = byterev(bitrev(Dat));
+                      DatByteCount++;
+                      calc_sdcard_crc(Dat, D0, D1, D2, D3, Crc0, Crc1, Crc2, Crc3);
+                      send_8_nibbles;
+
+                      j--;                      // Only advance if we did something
+                      break;
+              }
           }
       }
       else {
@@ -508,7 +518,7 @@ DSTATUS disk_initialize(BYTE IfNum)
   return RES_OK;
 }
 
-//todo: streaming version of this
+//todo: XMOS channel version of this
 #pragma unsafe arrays
 DRESULT disk_read(BYTE IfNum, BYTE buff[], DWORD sector, UINT count)
 {
@@ -548,9 +558,9 @@ DRESULT disk_write(BYTE IfNum, const BYTE buff[], DWORD sector, UINT count)
 #ifdef     _STREAM_FS
 
 /*-----------------------------------------------------------------------*/
-/* Write File - from an XMOS Streaming Channel                           */
+/* Write File - from an XMOS Channel                                     */
 /*-----------------------------------------------------------------------*/
-DRESULT disk_write_streamed(BYTE IfNum, streaming chanend c, DWORD sector, UINT count)
+DRESULT disk_write_streamed(BYTE IfNum, chanend c, DWORD sector, UINT count)
 {
   RESP Resp;
   unsigned char DummyData[1];

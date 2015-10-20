@@ -34,7 +34,7 @@ inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
  */
 uint32_t ahalfword = 0;
 uint32_t currChan = 0;
-const uint32_t nChans = 1;
+const uint32_t nChans = 4;
 
 inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
     if(currChan<nChans) {
@@ -77,7 +77,7 @@ void dual_i2s_in_task(streaming chanend c) {
     st = search_lr_sync;
     status_leds_good();
 
-    delay_milliseconds(1000*5);                 // Wait before starting to fill the buffer
+    delay_milliseconds(1000*1);                 // Wait before starting to fill the buffer
 
     while(1){
         switch(st) {

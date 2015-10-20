@@ -25,7 +25,7 @@ FIL Fil;                /* File object */
 #define max(a,b) ((a)>(b))?(a):(b)
 #define min(a,b) ((a)<(b))?(a):(b)
 
-const unsigned targetFileSize = 1*1024*1024;  //4096UL*1024*1024*1024-32768;   // Can't quite get to 4G size
+const unsigned targetFileSize = 16*1024*1024;  //4096UL*1024*1024*1024-32768;   // Can't quite get to 4G size
 
 void die(FRESULT rc ) /* Stop with dying message */
 {
@@ -55,7 +55,7 @@ extern unsigned SendCmd_twr_max, SendCmd_twr_min;
 
 /*****************************************************************************************/
 
-void disk_write_read_task(streaming chanend c)
+void disk_write_read_task(chanend c)
 {
   FRESULT rc;                     /* Result code */
   DIR dir;                        /* Directory object */

@@ -72,8 +72,10 @@ inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
 
 void insert_wav_header(streaming chanend c, uint32_t fileSize) {
     uint32_t p[hdrLen+1];       // working storage for the header allow some spare
+    uint32_t numSamples = (fileSize-sizeof(WaveHeader))/(2*totChans);
+    printf("numSamples = %d\n", numSamples);
 
-    set_wav_header((WaveHeader *)p, totChans, 48000, fileSize);
+    set_wav_header((WaveHeader *)p, totChans, 48000, numSamples);
     for(int i=0; i<hdrLen; i++) {
         c<: p[i];               // Send the header 32 bits at a time
     }

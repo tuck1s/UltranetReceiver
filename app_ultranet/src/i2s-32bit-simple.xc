@@ -9,6 +9,7 @@
 #include <xs1.h>
 #include <xclib.h>
 #include <stdint.h>
+#include "wavfile.h"                    // Helper functions for filling in WAV file header
 
 clock cb = XS1_CLKBLK_1;                // Clock Block
 in port bclk = XS1_PORT_1H;             // J7 pin 2 = BLCK from WM8804      Bit Clock
@@ -23,7 +24,8 @@ enum i2s_state { search_lr_sync, search_multiframe_sync, check_second_multiframe
 
 inline void status_leds_good();
 inline void status_leds_error();
-inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
+
+extern void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
 
 /*
  * Send two values a and b to the channel (helper function).
@@ -32,15 +34,18 @@ inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
  * Initial version:  just send channel A, most significant 16 bits contains the audio.
  * Double-pack the words written to the channel.
  */
+#define B_CHANNELS_ON
 uint32_t ahalfword = 0;
 uint32_t currChan = 0;
-const uint32_t nChans = 4;
+const uint32_t nChans = 2;              //todo: increase this
 
 inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
     if(currChan<nChans) {
         // This is an active channel - send it
-
-        // Write two 16-bit signed values into a single 32-bit channel-word
+#ifdef B_CHANNELS_ON
+        c<: (a&0xffff0000)|(b>>16);
+#else
+        // Compact mode - Write two 16-bit A-channel signed values into a single 32-bit channel-word
         if(ahalfword) {
             c<: (a&0xffff0000)|(ahalfword);      // Pack two words in, little-endian word order
             ahalfword = 0;              // Clear the pending value
@@ -48,9 +53,30 @@ inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
         else {
             ahalfword = a>>16;          // Store the pending value
         }
+#endif
     }
     currChan++;
     currChan &=0x7;       // Only one in 8 channels
+}
+
+#ifdef B_CHANNELS_ON
+#define totChans (nChans*2)
+#else
+#define totChans (nChans)
+#endif
+/*
+ * Insert a WAV header to the downstream channel
+ * Based on the parameters we have on the sample sender above
+ */
+#define hdrLen (sizeof(WaveHeader)/4)
+
+void insert_wav_header(streaming chanend c, uint32_t fileSize) {
+    uint32_t p[hdrLen+1];       // working storage for the header allow some spare
+
+    set_wav_header((WaveHeader *)p, totChans, 48000, fileSize);
+    for(int i=0; i<hdrLen; i++) {
+        c<: p[i];               // Send the header 32 bits at a time
+    }
 }
 
 /* Input on two i2s streams A and B in parallel
@@ -59,7 +85,7 @@ inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
  * - Process frames, while checking we're still in sync
  * - if data doesn't match, drop back to reacquire LR sync in case of missed or erroneous data
  */
-void dual_i2s_in_task(streaming chanend c) {
+void dual_i2s_in_task(streaming chanend c, uint32_t fileSize) {
     enum i2s_state st;
     int t, lr;
     uint32_t s1A, s2A, s1B, s2B;
@@ -77,7 +103,9 @@ void dual_i2s_in_task(streaming chanend c) {
     st = search_lr_sync;
     status_leds_good();
 
-    delay_milliseconds(1000*1);                 // Wait before starting to fill the buffer
+    insert_wav_header(c, fileSize);             // Put this into the fifo before stream samples
+
+    delay_milliseconds(1000*5);                 // Wait before starting to fill the buffer
 
     while(1){
         switch(st) {

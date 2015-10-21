@@ -76,7 +76,7 @@ typedef unsigned char RESP[17]; // type for SD responses
 #define NOP_PAUSE_HOLD  asm("nop");asm("nop");
 
 // Writes should need shorter setup time and longer hold time
-#define NOP_PAUSE_WR_SETUP asm("nop");
+#define NOP_PAUSE_WR_SETUP asm("nop");asm("nop");
 #define NOP_PAUSE_WR_HOLD  asm("nop");asm("nop");
 
 // Commands go from XMOS -> SDcard therefore use write timings
@@ -92,7 +92,7 @@ void ToggleClock(int count, out port clk)
   timer t;
   uint32_t time;
   int clkState = 0;
-  const uint32_t clkPeriod = 8;           // Units of 10ns. this is about as fast as a StartKit can go in this loop
+  const uint32_t clkPeriod = 4;           // Units of 10ns. this is about as fast as a StartKit can go in this loop
 
   t :> time;                              // get the initial timer value
   count<<=1;                              // both edges
@@ -116,10 +116,10 @@ unsigned WaitForTimed(in port p, unsigned bitmask, unsigned chkval, out port clk
   timer t;
   int clkState = 0;
   int i;
-  const uint32_t clkHighPeriod = 32;
+  const uint32_t clkHighPeriod = 4;
   const uint32_t nFastClks = 64;            // try this number of fast clocks first, then go slow (as the card is taking a while anyway)
-  const uint32_t clkLowPeriodFast = 32;     // Units of 10ns
-  const uint32_t clkLowPeriodSlow = 1000;   // Units of 10ns
+  const uint32_t clkLowPeriodFast = 4;     // Units of 10ns
+  const uint32_t clkLowPeriodSlow = 4;     // Units of 10ns todo: Tune this value - was 1024
   const uint32_t MaxSlowClks = 100000000/clkLowPeriodSlow;   // Wait a maximum of 1 second in slow mode
 
   t :> time;                            // get the initial timer value

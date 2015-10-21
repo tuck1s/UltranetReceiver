@@ -18,14 +18,13 @@
 #include "timing.h"
 #include "diskio.h"     /* To get the bus mode definition for debugging */
 #include "string.h"     /* To get memset function */
+#include <stdint.h>
 
 FATFS Fatfs;            /* File system object */
 FIL Fil;                /* File object */
 // BYTE Buff[512*1];      /* File read buffer (Make Smaller temporary/ at least 32 SD card blocks to let multiblock operations (if file not fragmented) */
 #define max(a,b) ((a)>(b))?(a):(b)
 #define min(a,b) ((a)<(b))?(a):(b)
-
-const unsigned targetFileSize = 16*1024*1024;  //4096UL*1024*1024*1024-32768;   // Can't quite get to 4G size
 
 void die(FRESULT rc ) /* Stop with dying message */
 {
@@ -55,7 +54,7 @@ extern unsigned SendCmd_twr_max, SendCmd_twr_min;
 
 /*****************************************************************************************/
 
-void disk_write_read_task(chanend c)
+void disk_write_read_task(chanend c, uint32_t targetFileSize)
 {
   FRESULT rc;                     /* Result code */
   DIR dir;                        /* Directory object */
@@ -65,14 +64,14 @@ void disk_write_read_task(chanend c)
   f_mount(&Fatfs, "", 1);        // Register volume work area (never fails) for SD host interface #0
                                  // Note the params have changed between fatFS 0.09 and 0.11
 
-  rc = f_unlink("Data.bin");     /* delete file if exist */
+  rc = f_unlink("DATA.WAV");     /* delete file if exist */
 
-  rc = f_open(&Fil, "Data.bin", FA_WRITE | FA_CREATE_ALWAYS);
+  rc = f_open(&Fil, "DATA.WAV", FA_WRITE | FA_CREATE_ALWAYS);
   if(rc) die(rc);
 
   // XMOS Streamed I/O and direct disk write
   // Pre-allocate clusters to the file
-  printf("Streaming directly to the file... expected file size %u bytes (0 means 4G!) \n", targetFileSize);
+  printf("Streaming directly to the file... expected file size %lu bytes (0 means 4G!) \n", targetFileSize);
   T = get_time();
   DWORD org = allocate_contiguous_clusters(&Fil, targetFileSize);
   unsigned alloc_time = get_time()-T;

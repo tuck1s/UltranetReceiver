@@ -37,7 +37,7 @@ extern void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
 #define B_CHANNELS_ON
 uint32_t ahalfword = 0;
 uint32_t currChan = 0;
-const uint32_t nChans = 2;              //todo: increase this
+const uint32_t nChans = 8;              //todo: increase this
 
 inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
     if(currChan<nChans) {
@@ -73,7 +73,7 @@ inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
 void insert_wav_header(streaming chanend c, uint32_t fileSize) {
     uint32_t p[hdrLen+1];       // working storage for the header allow some spare
     uint32_t numSamples = (fileSize-sizeof(WaveHeader))/(2*totChans);
-    printf("numSamples = %d\n", numSamples);
+    printf("WAV header:  numSamples = %d, totChans = %d, fileSize = %d\n\n", numSamples, totChans, fileSize);
 
     set_wav_header((WaveHeader *)p, totChans, 48000, numSamples);
     for(int i=0; i<hdrLen; i++) {

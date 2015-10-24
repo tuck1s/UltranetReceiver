@@ -65,6 +65,7 @@ void disk_write_read_task(chanend c, uint32_t targetFileSize)
                                  // Note the params have changed between fatFS 0.09 and 0.11
 
   rc = f_unlink("DATA.WAV");     /* delete file if exist */
+  printf("Result of f_unlink is %d\n", rc);
 
   rc = f_open(&Fil, "DATA.WAV", FA_WRITE | FA_CREATE_ALWAYS);
   if(rc) die(rc);
@@ -85,6 +86,10 @@ void disk_write_read_task(chanend c, uint32_t targetFileSize)
       /*
        * This is the main Write call - this does not return until the file is done
        */
+      printf("Syncing the file system\n");
+      rc = f_sync(&Fil);        // Ensure FAT info is written for this file
+      if(rc) die(rc);
+
       rc = disk_write_streamed(Fil.fs->drv, c, org, targetFileSize/512);
       if(rc) die(rc);
       printf("SendCmd took max %d usec, min %d usec\n", SendCmd_twr_max/100, SendCmd_twr_min/100);

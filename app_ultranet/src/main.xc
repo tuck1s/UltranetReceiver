@@ -5,7 +5,7 @@
 #include <xs1.h>
 #include <stdint.h>
 
-const unsigned targetFileSize = 256*1024*1024;  //4096UL*1024*1024*1024-32768;   // Can't quite get to 4G size
+const unsigned targetFileSize = 64*1024*1024;  //4096UL*1024*1024*1024-32768;   // Can't quite get to 4G size
 
 
 void disk_write_read_task(chanend c, uint32_t targetFileSize);

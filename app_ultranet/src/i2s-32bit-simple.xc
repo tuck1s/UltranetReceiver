@@ -17,8 +17,6 @@ in port lrclk = XS1_PORT_1F;            // J7 pin 1 = LRCLK from WM8804     Word
 in buffered port:32 dinA = XS1_PORT_1G; // J7 pin 3 = DOUT from WM8804      Ultranet Channels 1 .. 8 data
 in buffered port:32 dinB = XS1_PORT_1E; // J7 pin 4 = DOUT_9_16 from WM8804 Ultranet Channels 9 .. 16 data
 
-// out port scopetcrig = XS1_PORT_1J;       // Debug scope trigger on J7 pin 10
-
 enum i2s_state { search_lr_sync, search_multiframe_sync, check_second_multiframe_sync, in_sync };
 #define FRAME_SIZE 0x180
 
@@ -37,7 +35,7 @@ extern void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
 #define B_CHANNELS_ON
 uint32_t ahalfword = 0;
 uint32_t currChan = 0;
-const uint32_t nChans = 8;              //todo: increase this
+const uint32_t nChans = 2;              //todo: increase this
 
 inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
     if(currChan<nChans) {
@@ -107,7 +105,7 @@ void dual_i2s_in_task(streaming chanend c, uint32_t fileSize) {
 
     insert_wav_header(c, fileSize);             // Put this into the fifo before stream samples
 
-    delay_milliseconds(1000*5);                 // Wait before starting to fill the buffer
+    delay_milliseconds(1000*2);               // Wait before starting to fill the buffer
 
     while(1){
         switch(st) {
@@ -186,43 +184,71 @@ void dual_i2s_in_task(streaming chanend c, uint32_t fileSize) {
  *
  * As the leds go to 3V3, 0x00000 drives all 9 leds on, and 0xE1F80 drives
  * all nine leds off.
+ *
+ * Need bit 0 set high to permit reading back of button press.
  */
 #define middle_led 0x00800
-const int leds_3x3[] = {0xA1F80, 0xC1F80, 0xE1B80, 0xE1F00, 0xE1E80, 0xE1D80, 0xE0F80, 0x71F80};
+const int leds_3x3_spin[] = {0xA1F81, 0xC1F81, 0xE1B81, 0xE1F01, 0xE1E81, 0xE1D81, 0xE0F81, 0x71F81};
+const int leds_3x3_ready[]= {0x61581, 0x60581};
+
 port p32 = XS1_PORT_32A;                            // This the 3x3 LEDs port
+port led_D1 = XS1_PORT_1A;
+port led_D2 = XS1_PORT_1D;
 
 // Counters
 uint32_t frame_err_ctr = 0;
 uint32_t frame_good_ctr = 0;
 
 uint32_t err_led_on = 0;
-uint32_t spin_bits = 0xA1F80;                       // Starting position
-uint32_t spin_pos = 0;
-uint32_t err_bit = 0;
-
-const uint32_t err_led_on_time = 1*(48000/(FRAME_SIZE/8));
+uint32_t led_pos = 0;
+uint32_t button_latch = 1;                        // Start with button in assumed "non pressed" state i.e. logic high
+uint32_t running_state = 0;                       // Start in 'waiting' state
+#define err_led_on_time 24;                       // Three rotations
 
 // 8-position spinning dot for good frames (changing every 2^n valid frames)
 // xor'd with the middle one indicating errors
+//
+// Also read the on-board button status which is port bit 0
 void status_leds_good() {
-    frame_good_ctr++;
-    if(!(frame_good_ctr & 0x3f)) {
-        // Walk to the next position every 2^n frames
-        spin_pos++; spin_pos &= 0x7;
-        spin_bits = (leds_3x3[spin_pos]);
+    uint32_t button;
+    uint32_t led_bits;                      // Compose the current display
+    if(!(frame_good_ctr++ & 0x3f)) {
+        // Walk to the next position every 2^n frames, and check input button
+        p32 :> void;                        // Flip the port into input mode - will read it shortly
+        if(running_state)
+        {
+             // Display spinning dot on the 3x3 LEDs
+             led_bits = leds_3x3_spin[led_pos &0x7];
+        }
+        else {
+             // Display a "ready" arrow on the 3x3 LEDs
+             led_bits = leds_3x3_ready[led_pos &0x1];
+        }
+        // Error LED: count down, extinguish when zero
+        if(err_led_on) {
+            err_led_on--;
+            led_bits ^= middle_led;
+        }
+        // Now read the button
+        button = peek(p32)&1;                   // allow settling time
+        if(button != button_latch) {
+            button_latch = button;
+            if(!button) {                      // Logic low = button pressed
+                running_state = !running_state;
+                led_pos = 0;                   // Start display of new pattern
+            }
+        }
+        // Write back to the display
+        p32 <: led_bits;
+        led_D1 <: button;
+        led_D2 <: !(button);
+        led_pos++;
     }
-    if(err_led_on) {
-        err_led_on--;                   // count down, extinguish when zero
-    }
-    else {
-        err_bit = 0;
-    }
-    p32 <: (spin_bits ^ err_bit);
 }
+
 
 void status_leds_error() {
     frame_err_ctr++;
     err_led_on = err_led_on_time;       // Light the Error LED through the next n seconds/frames
-    err_bit = middle_led;
-    p32 <: (spin_bits ^ err_bit);
+    p32 <: middle_led|0x1;              // Display an error pattern, but also leave button input bit high
 }

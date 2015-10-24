@@ -72,7 +72,7 @@ void disk_write_read_task(chanend c, uint32_t targetFileSize)
 
   // XMOS Streamed I/O and direct disk write
   // Pre-allocate clusters to the file
-  printf("Streaming directly to the file... expected file size %lu bytes (0 means 4G!) \n", targetFileSize);
+  printf("Expected file size %lu bytes (0 means 4G!) \n", targetFileSize);
   T = get_time();
   DWORD org = allocate_contiguous_clusters(&Fil, targetFileSize);
   unsigned alloc_time = get_time()-T;
@@ -90,6 +90,7 @@ void disk_write_read_task(chanend c, uint32_t targetFileSize)
       rc = f_sync(&Fil);        // Ensure FAT info is written for this file
       if(rc) die(rc);
 
+      printf("Streaming directly to the file... \n");
       rc = disk_write_streamed(Fil.fs->drv, c, org, targetFileSize/512);
       if(rc) die(rc);
       printf("SendCmd took max %d usec, min %d usec\n", SendCmd_twr_max/100, SendCmd_twr_min/100);

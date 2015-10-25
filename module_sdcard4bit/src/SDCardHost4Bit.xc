@@ -16,8 +16,8 @@ void dead_parrot(int rc)            /* Stop with dying message */
 
 
 // Instrumentation:  Measure max/min response times
-unsigned SendCmd_twr_max = 0;
-unsigned SendCmd_twr_min = 9999999;
+uint32_t SendCmd_twr_max, SendCmd_twr_min, SendCmd_twr_total, SendCmd_twr_count;
+
 #define max(a,b) ((a)>(b))?(a):(b)
 #define min(a,b) ((a)<(b))?(a):(b)
 
@@ -432,8 +432,10 @@ static DRESULT SendCmd(BYTE IfNum, BYTE Cmd, DWORD Arg, RESP_TYPE RespType, int 
       if(!(Dat &0x08)) return RES_ERROR;
 
       unsigned this_t = get_time()-T;            // Instrument times taken to write
-      SendCmd_twr_max = max(SendCmd_twr_min, this_t);
+      SendCmd_twr_max = max(SendCmd_twr_max, this_t);
       SendCmd_twr_min = min(SendCmd_twr_min, this_t);
+      SendCmd_twr_total += (this_t/100);
+      SendCmd_twr_count++;
     }
     while(++DataBlocks);
   }
@@ -569,6 +571,7 @@ DRESULT disk_write_streamed(BYTE IfNum, chanend c, DWORD sector, UINT count)
   if(1 < count)
   { // multiblock write
     //if(SendCmd(SDif, 23, NumBlocks, R1, 0, DummyData, Resp)) return 0; // set foreseen multiple block read. Remarked because only optionally supported by cards
+    printf("Writing sector %d onwards\n", sector);
     if(SendCmd(IfNum, 25, SDif[IfNum].Ccs ? sector : 512 * sector, R1, -count, (BYTE *)NULL, Resp, c)) return RES_ERROR; // multiblock write
     if(SendCmd(IfNum, 12, 0, R1B, 0, DummyData, Resp, c)) return RES_ERROR; // stop multi-block write. (using stop command instead of cmd23)
   }

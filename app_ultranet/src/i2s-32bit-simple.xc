@@ -35,7 +35,7 @@ extern void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
 #define B_CHANNELS_ON
 uint32_t ahalfword = 0;
 uint32_t currChan = 0;
-const uint32_t nChans = 2;              //todo: increase this
+const uint32_t nChans = 4;              //todo: increase this
 
 inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
     if(currChan<nChans) {
@@ -105,7 +105,7 @@ void dual_i2s_in_task(streaming chanend c, uint32_t fileSize) {
 
     insert_wav_header(c, fileSize);             // Put this into the fifo before stream samples
 
-    delay_milliseconds(1000*2);               // Wait before starting to fill the buffer
+    //delay_milliseconds(1000*2);               // Wait before starting to fill the buffer
 
     while(1){
         switch(st) {

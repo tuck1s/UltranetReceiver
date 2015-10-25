@@ -40,6 +40,7 @@ DWORD allocate_contiguous_clusters (    /* Returns the first sector in LBA (0:er
     if (len == fp->fsize) {
         ncl = 0; ccl = fp->sclust;
         do {
+            printf("Checking existing cluster: %ld\n", cl);
             cl = get_fat(fp->fs, ccl);  /* Get the cluster status */
             if (cl + 1 < 3) return 0;   /* Hard error? */
             if (cl != ccl + 1 && cl < fp->fs->n_fatent) break;  /* Not contiguous? */
@@ -72,41 +73,11 @@ DWORD allocate_contiguous_clusters (    /* Returns the first sector in LBA (0:er
     /* Create a contiguous cluster chain */
     fp->fs->last_clust = ccl - 1;
     if (f_lseek(fp, len)) return 0;
+    printf("fp->sclust = %d\n", fp->sclust);
+    printf("New contiguous cluster range from : %ld to %ld\n Sector numbers: %ld to %ld\n",
+            fp->sclust, fp->fs->last_clust,
+            clust2sect(fp->fs, fp->sclust), clust2sect(fp->fs, fp->fs->last_clust) );
 
     return clust2sect(fp->fs, fp->sclust);  /* Return file start sector */
 #endif
 }
-
-#if 0
-int stub (void)
-{
-    FRESULT fr;
-    DRESULT dr;
-    FATFS fs;
-    FIL fil;
-    DWORD org;
-
-    BYTE Buff[1024];
-
-    /* Open or create a file to write */
-    f_mount(&fs, "", 0);
-    fr = f_open(&fil, "fastrec.log", FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
-    if (fr) return 1;
-
-    /* Check if the file is 256MB in size and occupies a contiguous area.
-    /  If not, a contiguous area will be re-allocated to the file. */
-    org = allocate_contiguous_clusters(&fil, 0x10000000);
-    if (!org) {
-        printf("Function failed due to any error or insufficient contiguous area.\n");
-        f_close(&fil);
-        return 1;
-    }
-
-    /* Now you can read/write the file without file system layer. */
-
-    dr = disk_write(fil.fs->drv, Buff, org, 1024);   /* Write 512KiB from top of the file */
-
-    f_close(&fil);
-    return 0;
-}
-#endif

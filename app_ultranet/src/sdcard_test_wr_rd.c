@@ -49,7 +49,7 @@ DWORD allocate_contiguous_clusters (    /* Returns the first sector in LBA (0:er
 
 DRESULT disk_write_streamed(BYTE IfNum, streaming chanend c, DWORD sector, UINT count);
 
-extern unsigned SendCmd_twr_max, SendCmd_twr_min;
+extern uint32_t SendCmd_twr_max, SendCmd_twr_min, SendCmd_twr_total, SendCmd_twr_count;
 
 
 /*****************************************************************************************/
@@ -90,10 +90,19 @@ void disk_write_read_task(chanend c, uint32_t targetFileSize)
       rc = f_sync(&Fil);        // Ensure FAT info is written for this file
       if(rc) die(rc);
 
+      printf("Starting cluster for file: %ld\n", org);
       printf("Streaming directly to the file... \n");
+
+      // Instrumentation:  Measure max/min response times
+      SendCmd_twr_max = 0;
+      SendCmd_twr_min = 9999999;
+      SendCmd_twr_total = 0;
+      SendCmd_twr_count = 0;
+
       rc = disk_write_streamed(Fil.fs->drv, c, org, targetFileSize/512);
       if(rc) die(rc);
-      printf("SendCmd took max %d usec, min %d usec\n", SendCmd_twr_max/100, SendCmd_twr_min/100);
+      printf("SendCmd took max %lu usec, min %lu usec, total %lu usec, count %lu, avg %lu usec\n",
+              SendCmd_twr_max/100, SendCmd_twr_min/100, SendCmd_twr_total, SendCmd_twr_count, SendCmd_twr_total/SendCmd_twr_count);
   }
 
   printf("\nClosing the file...");

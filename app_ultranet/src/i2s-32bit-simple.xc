@@ -35,7 +35,7 @@ extern void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
 #define B_CHANNELS_ON
 uint32_t ahalfword = 0;
 uint32_t currChan = 0;
-const uint32_t nChans = 8;              //todo: increase this
+const uint32_t nChans = 4;              //todo: increase this
 
 inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
     if(currChan<nChans) {

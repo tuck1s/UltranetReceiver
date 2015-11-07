@@ -73,7 +73,6 @@ DWORD allocate_contiguous_clusters (    /* Returns the first sector in LBA (0:er
     /* Create a contiguous cluster chain */
     fp->fs->last_clust = ccl - 1;
     if (f_lseek(fp, len)) return 0;
-    printf("fp->sclust = %d\n", fp->sclust);
     printf("New contiguous cluster range from : %ld to %ld\n Sector numbers: %ld to %ld\n",
             fp->sclust, fp->fs->last_clust,
             clust2sect(fp->fs, fp->sclust), clust2sect(fp->fs, fp->fs->last_clust) );

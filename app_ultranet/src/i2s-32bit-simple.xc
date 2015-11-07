@@ -35,7 +35,7 @@ extern void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b);
 #define B_CHANNELS_ON
 uint32_t ahalfword = 0;
 uint32_t currChan = 0;
-const uint32_t nChans = 4;              //todo: increase this
+const uint32_t nChans = 8;              //todo: increase this
 
 inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
     if(currChan<nChans) {
@@ -71,7 +71,7 @@ inline void send_ab_to_chan(streaming chanend c, uint32_t a, uint32_t b) {
 void insert_wav_header(streaming chanend c, uint32_t fileSize) {
     uint32_t p[hdrLen+1];       // working storage for the header allow some spare
     uint32_t numSamples = (fileSize-sizeof(WaveHeader))/(2*totChans);
-    printf("WAV header:  numSamples = %d, totChans = %d, fileSize = %d\n\n", numSamples, totChans, fileSize);
+    printf("WAV header:  numSamples = %lu, totChans = %lu, fileSize = %lu\n\n", numSamples, totChans, fileSize);
 
     set_wav_header((WaveHeader *)p, totChans, 48000, numSamples);
     for(int i=0; i<hdrLen; i++) {
@@ -85,6 +85,9 @@ void insert_wav_header(streaming chanend c, uint32_t fileSize) {
  * - Process frames, while checking we're still in sync
  * - if data doesn't match, drop back to reacquire LR sync in case of missed or erroneous data
  */
+
+uint32_t running_state = 0;                       // Start in 'waiting' state
+
 void dual_i2s_in_task(streaming chanend c, uint32_t fileSize) {
     enum i2s_state st;
     int t, lr;
@@ -147,8 +150,10 @@ void dual_i2s_in_task(streaming chanend c, uint32_t fileSize) {
             dinB :> s2B; s2B = bitrev(s2B);
             if((s2A & 0xff) == lsb_mframe && (s2B & 0xff) == lsb_mframe) {
                 // Stream out the valid samples from the start of this multiframe
-                send_ab_to_chan(c, s1A, s1B);
-                send_ab_to_chan(c, s2A, s2B);
+                if(running_state) {
+                    send_ab_to_chan(c, s1A, s1B);
+                    send_ab_to_chan(c, s2A, s2B);
+                }
                 st = in_sync;
             }
             else {
@@ -162,7 +167,9 @@ void dual_i2s_in_task(streaming chanend c, uint32_t fileSize) {
             for(t=2; t<FRAME_SIZE; t++) {
                 dinA :> s1A; s1A = bitrev(s1A);
                 dinB :> s1B; s1B = bitrev(s1B);
-                send_ab_to_chan(c, s1A, s1B);
+                if(running_state) {
+                    send_ab_to_chan(c, s1A, s1B);
+                }
             }
             // Check the next frame is starting with multiframe sync in the expected place
             t = 1;                      // Strict - only got 1 chance to get it
@@ -202,7 +209,6 @@ uint32_t frame_good_ctr = 0;
 uint32_t err_led_on = 0;
 uint32_t led_pos = 0;
 uint32_t button_latch = 1;                        // Start with button in assumed "non pressed" state i.e. logic high
-uint32_t running_state = 0;                       // Start in 'waiting' state
 #define err_led_on_time 24;                       // Three rotations
 
 // 8-position spinning dot for good frames (changing every 2^n valid frames)

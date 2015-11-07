@@ -571,7 +571,6 @@ DRESULT disk_write_streamed(BYTE IfNum, chanend c, DWORD sector, UINT count)
   if(1 < count)
   { // multiblock write
     //if(SendCmd(SDif, 23, NumBlocks, R1, 0, DummyData, Resp)) return 0; // set foreseen multiple block read. Remarked because only optionally supported by cards
-    printf("Writing sector %d onwards\n", sector);
     if(SendCmd(IfNum, 25, SDif[IfNum].Ccs ? sector : 512 * sector, R1, -count, (BYTE *)NULL, Resp, c)) return RES_ERROR; // multiblock write
     if(SendCmd(IfNum, 12, 0, R1B, 0, DummyData, Resp, c)) return RES_ERROR; // stop multi-block write. (using stop command instead of cmd23)
   }

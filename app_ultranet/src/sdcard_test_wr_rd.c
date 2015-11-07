@@ -49,7 +49,7 @@ DWORD allocate_contiguous_clusters (    /* Returns the first sector in LBA (0:er
 
 DRESULT disk_write_streamed(BYTE IfNum, streaming chanend c, DWORD sector, UINT count);
 
-extern unsigned SendCmd_twr_max, SendCmd_twr_min;
+extern uint32_t SendCmd_twr_max, SendCmd_twr_min, SendCmd_twr_total, SendCmd_twr_count;
 
 
 /*****************************************************************************************/
@@ -61,11 +61,14 @@ void disk_write_read_task(chanend c, uint32_t targetFileSize)
   FILINFO fno;                    /* File information object */
   UINT T;
 
+  if(targetFileSize & 511) {
+      printf("Error: file size not exact number of clusters\n");
+      die(0);
+  }
   f_mount(&Fatfs, "", 1);        // Register volume work area (never fails) for SD host interface #0
                                  // Note the params have changed between fatFS 0.09 and 0.11
 
   rc = f_unlink("DATA.WAV");     /* delete file if exist */
-  printf("Result of f_unlink is %d\n", rc);
 
   rc = f_open(&Fil, "DATA.WAV", FA_WRITE | FA_CREATE_ALWAYS);
   if(rc) die(rc);
@@ -74,10 +77,10 @@ void disk_write_read_task(chanend c, uint32_t targetFileSize)
   // Pre-allocate clusters to the file
   printf("Expected file size %lu bytes (0 means 4G!) \n", targetFileSize);
   T = get_time();
-  DWORD org = allocate_contiguous_clusters(&Fil, targetFileSize);
+  DWORD fileSect = allocate_contiguous_clusters(&Fil, targetFileSize);
   unsigned alloc_time = get_time()-T;
   printf("Allocation took %u ms\n", alloc_time/100000);
-  if (!org) {
+  if (!fileSect) {              // Allocation failed
       printf("Error: allocate_contiguous_clusters() failed.\n");
       f_close(&Fil);
       die(0);
@@ -91,9 +94,31 @@ void disk_write_read_task(chanend c, uint32_t targetFileSize)
       if(rc) die(rc);
 
       printf("Streaming directly to the file... \n");
-      rc = disk_write_streamed(Fil.fs->drv, c, org, targetFileSize/512);
-      if(rc) die(rc);
-      printf("SendCmd took max %d usec, min %d usec\n", SendCmd_twr_max/100, SendCmd_twr_min/100);
+      DWORD sectorsPerWriteChunk = Fatfs.csize*16;          // We will attempt to write this many
+      DWORD bytesPerWriteChunk = sectorsPerWriteChunk<<9;   // Assume 512-byte sectors
+
+      while(targetFileSize) {
+          if(targetFileSize < bytesPerWriteChunk) {
+              // Partial streamed write chunk at end
+              sectorsPerWriteChunk = targetFileSize>>9;     // Assume 512-byte sectors
+              bytesPerWriteChunk = targetFileSize;          // End of file can be of arbitrary length, but we'll always round down to whole sector
+          }
+          //printf("Writing sector %lu with %lu sectors, %lu bytes\n", fileSect, sectorsPerWriteChunk, bytesPerWriteChunk);
+
+          // Instrumentation:  Measure max/min response times
+          SendCmd_twr_max = 0;
+          SendCmd_twr_min = 9999999;
+          SendCmd_twr_total = 0;
+          SendCmd_twr_count = 0;
+
+          rc = disk_write_streamed(Fil.fs->drv, c, fileSect, sectorsPerWriteChunk);
+          if(rc) die(rc);
+          //printf("SendCmd took max %lu usec, min %lu usec, total %lu usec, count %lu, avg %lu usec\n",
+          //        SendCmd_twr_max/100, SendCmd_twr_min/100, SendCmd_twr_total, SendCmd_twr_count, SendCmd_twr_total/SendCmd_twr_count);
+
+          targetFileSize -= bytesPerWriteChunk;             // Update the amount written so far, and the working sector number
+          fileSect += sectorsPerWriteChunk;
+      }
   }
 
   printf("\nClosing the file...");
